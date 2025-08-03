@@ -1,6 +1,3 @@
-"""
-Lightweight STAN Chatbot Backend - Separate Deployment Version
-"""
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import logging
@@ -14,15 +11,32 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Enable CORS for frontend deployment
-CORS(app, origins=[
-    "https://*.vercel.app",
-    "https://*.netlify.app", 
-    "https://*.github.io",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8080"
-])
+# Enable CORS for frontend deployment with comprehensive settings
+CORS(app, 
+     origins=[
+         "https://mindful-chatbot.vercel.app",
+         "https://*.vercel.app",
+         "https://*.netlify.app", 
+         "https://*.github.io",
+         "http://localhost:3000",
+         "http://127.0.0.1:3000",
+         "http://localhost:8080"
+     ],
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization"],
+     supports_credentials=True
+)
+
+# Add after_request handler for additional CORS headers
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin in ['https://mindful-chatbot.vercel.app', 'http://localhost:3000']:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Simple in-memory storage
 chat_sessions = {}
@@ -135,6 +149,11 @@ def index():
         }
     })
 
+@app.route('/chat', methods=['OPTIONS'])
+def chat_options():
+    """Handle preflight requests for CORS"""
+    return jsonify({}), 200
+
 @app.route('/chat', methods=['POST'])
 def chat():
     """Handle chat messages with lightweight processing"""
@@ -185,6 +204,11 @@ def chat():
     except Exception as e:
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/health', methods=['OPTIONS'])
+def health_options():
+    """Handle preflight requests for health endpoint"""
+    return jsonify({}), 200
 
 @app.route('/health')
 def health():
